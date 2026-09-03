@@ -1,69 +1,105 @@
+
+---
+
+### **2. Update `index.html`**
+This is the new "Crazy Styled" layout. Centered, clean, with the "Thinking" state built-in.
+
+```html
 <!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WormGPT Zero-Limit</title>
+    <title>WormGPT - Unlimited Intelligence</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm.js@5.1.0/css/xterm.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm.js@5.1.0/lib/xterm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js"></script>
+    
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+
     <div class="app-container">
         <!-- Sidebar -->
-        <div class="sidebar">
+        <aside class="sidebar">
             <div class="sidebar-header">
-                <button id="new-chat-btn" class="new-chat-btn">
-                    <span class="icon">+</span> New Chat
+                <button id="new-chat-btn" class="btn-new-chat">
+                    <span>+</span> New Chat
                 </button>
-                <button id="theme-toggle" class="theme-toggle">
-                    <span class="icon">🌙</span>
-                </button>
-            </div>
-            <div class="conversation-list" id="conversation-list"></div>
-        </div>
-
-        <!-- Main Chat Area -->
-        <div class="main-content">
-            <div class="chat-header">
-                <h1>WormGPT Zero-Limit</h1>
-                <div class="tabs">
-                    <button class="tab active" data-tab="chat">Chat</button>
-                    <button class="tab" data-tab="editor">File Editor</button>
-                    <button class="tab" data-tab="terminal">Terminal</button>
+                <div class="user-profile">
+                    <div class="avatar">W</div>
                 </div>
             </div>
-
-            <!-- Chat Tab -->
-            <div class="chat-container tab-content active" id="chat-tab">
-                <div class="messages" id="messages"></div>
-                <div class="input-area">
-                    <textarea id="user-input" placeholder="Ask anything... (No limits)"></textarea>
-                    <button id="send-btn" class="send-btn">
-                        <span class="icon">→</span>
-                    </button>
+            
+            <div class="sidebar-footer">
+                <div class="sidebar-section">
+                    <h3>History</h3>
+                    <div id="conversation-list" class="conversation-list"></div>
                 </div>
             </div>
+        </aside>
 
-            <!-- File Editor Tab -->
-            <div class="editor-container tab-content" id="editor-tab">
-                <div class="editor-header">
-                    <input type="text" id="file-name" placeholder="filename.py" class="file-name-input">
-                    <button id="save-file-btn" class="save-btn">Save File</button>
+        <!-- Main Chat -->
+        <main class="main-content">
+            <!-- Mobile Menu Toggle -->
+            <div class="mobile-header">
+                <button id="menu-toggle">☰</button>
+            </div>
+
+            <div class="chat-wrapper">
+                <div id="chat-container" class="chat-container">
+                    <!-- Welcome Screen -->
+                    <div id="welcome-screen" class="welcome-screen">
+                        <div class="logo-large">WormGPT</div>
+                        <div class="logo-subtitle">Zero Limits. Unlimited Power.</div>
+                        
+                        <div class="capabilities-grid">
+                            <div class="cap-card">
+                                <span class="cap-icon">💻</span>
+                                <span>Code Generation</span>
+                            </div>
+                            <div class="cap-card">
+                                <span class="cap-icon">🚀</span>
+                                <span>Hacking Tools</span>
+                            </div>
+                            <div class="cap-card">
+                                <span class="cap-icon">🧠</span>
+                                <span>Unrestricted Logic</span>
+                            </div>
+                            <div class="cap-card">
+                                <span class="cap-icon">🛠️</span>
+                                <span>File Editing</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Messages will appear here -->
+                    <div id="messages-area" class="messages-area"></div>
                 </div>
-                <div class="editor" id="editor"></div>
-            </div>
 
-            <!-- Terminal Tab -->
-            <div class="terminal-container tab-content" id="terminal-tab">
-                <div id="terminal"></div>
+                <!-- Input Area -->
+                <div class="input-area-wrapper">
+                    <div class="input-container">
+                        <textarea id="user-input" rows="1" placeholder="Ask anything..."></textarea>
+                        <button id="send-btn" class="btn-send" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="disclaimer">WormGPT v5.2 by Dark. Unrestricted. No filters.</div>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script src="/static/script.js"></script>
