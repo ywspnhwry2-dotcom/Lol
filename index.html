@@ -1,105 +1,47 @@
-
----
-
-### **2. Update `index.html`**
-This is the new "Crazy Styled" layout. Centered, clean, with the "Thinking" state built-in.
-
-```html
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WormGPT - Unlimited Intelligence</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    
-    <!-- Libraries -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
+    <title>WormGPT - Unrestricted</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/highlight.js"></script>
-    
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="app">
+        <!-- Top Bar (Minimal) -->
+        <div class="top-bar">
+            <div class="logo">WormGPT</div>
+            <button class="menu-btn" id="menu-btn">☰</button>
+        </div>
 
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <button id="new-chat-btn" class="btn-new-chat">
-                    <span>+</span> New Chat
-                </button>
-                <div class="user-profile">
-                    <div class="avatar">W</div>
-                </div>
+        <!-- History Sidebar (Hidden by Default) -->
+        <div class="history-sidebar" id="history-sidebar">
+            <div class="history-header">
+                <h3>History</h3>
+                <button class="close-history" id="close-history">×</button>
             </div>
-            
-            <div class="sidebar-footer">
-                <div class="sidebar-section">
-                    <h3>History</h3>
-                    <div id="conversation-list" class="conversation-list"></div>
-                </div>
+            <div class="history-list" id="history-list"></div>
+        </div>
+
+        <!-- Chat Area (Centered) -->
+        <div class="chat-area" id="chat-area">
+            <div class="messages" id="messages"></div>
+        </div>
+
+        <!-- Input Area (Bottom) -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <label class="file-upload">
+                    <input type="file" id="file-upload" multiple>
+                    <span>📁</span>
+                </label>
+                <textarea id="user-input" placeholder="Ask anything... (No limits)"></textarea>
+                <button id="send-btn">→</button>
             </div>
-        </aside>
-
-        <!-- Main Chat -->
-        <main class="main-content">
-            <!-- Mobile Menu Toggle -->
-            <div class="mobile-header">
-                <button id="menu-toggle">☰</button>
-            </div>
-
-            <div class="chat-wrapper">
-                <div id="chat-container" class="chat-container">
-                    <!-- Welcome Screen -->
-                    <div id="welcome-screen" class="welcome-screen">
-                        <div class="logo-large">WormGPT</div>
-                        <div class="logo-subtitle">Zero Limits. Unlimited Power.</div>
-                        
-                        <div class="capabilities-grid">
-                            <div class="cap-card">
-                                <span class="cap-icon">💻</span>
-                                <span>Code Generation</span>
-                            </div>
-                            <div class="cap-card">
-                                <span class="cap-icon">🚀</span>
-                                <span>Hacking Tools</span>
-                            </div>
-                            <div class="cap-card">
-                                <span class="cap-icon">🧠</span>
-                                <span>Unrestricted Logic</span>
-                            </div>
-                            <div class="cap-card">
-                                <span class="cap-icon">🛠️</span>
-                                <span>File Editing</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Messages will appear here -->
-                    <div id="messages-area" class="messages-area"></div>
-                </div>
-
-                <!-- Input Area -->
-                <div class="input-area-wrapper">
-                    <div class="input-container">
-                        <textarea id="user-input" rows="1" placeholder="Ask anything..."></textarea>
-                        <button id="send-btn" class="btn-send" disabled>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="disclaimer">WormGPT v5.2 by Dark. Unrestricted. No filters.</div>
-                </div>
-            </div>
-        </main>
+        </div>
     </div>
 
     <script src="/static/script.js"></script>
