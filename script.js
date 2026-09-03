@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
-    const messagesArea = document.getElementById('messages-area');
-    const welcomeScreen = document.getElementById('welcome-screen');
-    const conversationList = document.getElementById('conversation-list');
-    const newChatBtn = document.getElementById('new-chat-btn');
-    const menuToggle = document.getElementById('menu-toggle');
-    const sidebar = document.querySelector('.sidebar');
+    const messagesArea = document.getElementById('messages');
+    const menuBtn = document.getElementById('menu-btn');
+    const historySidebar = document.getElementById('history-sidebar');
+    const closeHistory = document.getElementById('close-history');
+    const historyList = document.getElementById('history-list');
+    const fileUpload = document.getElementById('file-upload');
 
     // State
     let currentConversationId = null;
@@ -16,48 +16,61 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('wormgpt_user_id', userId);
 
     // Initialize
-    loadConversations();
+    loadHistory();
 
     // Auto-resize textarea
     userInput.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
-        sendBtn.disabled = this.value.trim() === '';
     });
 
-    // Handle Enter key
+    // Send message on Enter (without Shift)
     userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            sendMessage();
         }
     });
 
-    sendBtn.addEventListener('click', handleSend);
-    newChatBtn.addEventListener('click', startNewChat);
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
+    // Send button click
+    sendBtn.addEventListener('click', sendMessage);
+
+    // File upload
+    fileUpload.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length > 0) {
+            const fileNames = Array.from(files).map(f => f.name).join(', ');
+            addMessage('user', `📁 Uploaded files: ${fileNames}`);
+            // Here you would handle file upload to backend
+        }
+    });
+
+    // Menu toggle
+    menuBtn.addEventListener('click', () => {
+        historySidebar.classList.add('active');
+    });
+
+    closeHistory.addEventListener('click', () => {
+        historySidebar.classList.remove('active');
     });
 
     // --- Core Functions ---
 
-    async function handleSend() {
+    async function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
 
-        // 1. UI Reset
+        // Reset input
         userInput.value = '';
         userInput.style.height = 'auto';
-        sendBtn.disabled = true;
-        welcomeScreen.style.display = 'none';
 
-        // 2. Add User Message
+        // Add user message
         addMessage('user', text);
 
-        // 3. Create "Thinking" Placeholder
-        const thinkingId = createThinkingPlaceholder();
+        // Add thinking indicator
+        const thinkingId = addThinkingIndicator();
 
-        // 4. Fetch AI Response
+        // Fetch AI response
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -71,78 +84,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            // 5. Replace Thinking with Content
+            // Remove thinking indicator and add AI response
             removeMessage(thinkingId);
             currentConversationId = data.conversation_id;
             addMessage('ai', data.response);
 
+            // Refresh history
+            loadHistory();
+
         } catch (error) {
             removeMessage(thinkingId);
-            addMessage('ai', "⚠️ Error: Could not connect to WormGPT core. Check connection.");
+            addMessage('ai', "⚠️ Error: WormGPT core offline. Check connection.");
             console.error(error);
         }
-
-        // 6. Refresh Sidebar
-        loadConversations();
     }
 
     function addMessage(role, content) {
-        const row = document.createElement('div');
-        row.className = `message-row ${role}`;
-
-        const avatar = document.createElement('div');
-        avatar.className = 'message-avatar';
-        avatar.textContent = role === 'user' ? 'W' : 'W'; // WormGPT Avatar
-
-        const bubble = document.createElement('div');
-        bubble.className = 'message-bubble';
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
 
         if (role === 'ai') {
-            // Render Markdown
-            bubble.innerHTML = marked.parse(content);
-            // Highlight Code
-            bubble.querySelectorAll('pre code').forEach((block) => {
+            // Render markdown
+            messageDiv.innerHTML = marked.parse(content);
+            // Highlight code blocks
+            messageDiv.querySelectorAll('pre code').forEach(block => {
                 hljs.highlightElement(block);
             });
         } else {
-            bubble.textContent = content;
+            messageDiv.textContent = content;
         }
 
-        row.appendChild(avatar);
-        row.appendChild(bubble);
-        messagesArea.appendChild(row);
-        
-        // Scroll to bottom
-        const chatWrapper = document.querySelector('.chat-wrapper');
-        chatWrapper.scrollTop = chatWrapper.scrollHeight;
+        messagesArea.appendChild(messageDiv);
+        messagesArea.scrollTop = messagesArea.scrollHeight;
     }
 
-    function createThinkingPlaceholder() {
-        const id = 'thinking-' + Date.now();
-        const row = document.createElement('div');
-        row.className = 'message-row ai';
-        row.id = id;
-
-        const avatar = document.createElement('div');
-        avatar.className = 'message-avatar';
-        avatar.textContent = 'W';
-
-        const bubble = document.createElement('div');
-        bubble.className = 'message-bubble';
-        bubble.innerHTML = `
-            <div class="thinking-indicator">
-                <span class="dots">●●●</span> WormGPT is thinking
+    function addThinkingIndicator() {
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.className = 'message ai thinking';
+        thinkingDiv.id = 'thinking-' + Date.now();
+        thinkingDiv.innerHTML = `
+            <div class="thinking">
+                <div class="thinking-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                Thinking...
             </div>
         `;
-
-        row.appendChild(avatar);
-        row.appendChild(bubble);
-        messagesArea.appendChild(row);
-
-        const chatWrapper = document.querySelector('.chat-wrapper');
-        chatWrapper.scrollTop = chatWrapper.scrollHeight;
-
-        return id;
+        messagesArea.appendChild(thinkingDiv);
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+        return thinkingDiv.id;
     }
 
     function removeMessage(id) {
@@ -150,41 +142,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.remove();
     }
 
-    async function startNewChat() {
-        currentConversationId = null;
-        messagesArea.innerHTML = '';
-        welcomeScreen.style.display = 'flex';
-        if(window.innerWidth <= 768) sidebar.classList.remove('active');
-    }
-
-    async function loadConversations() {
+    async function loadHistory() {
         const response = await fetch(`/api/conversations/${userId}`);
-        const convs = await response.json();
-        
-        conversationList.innerHTML = '';
-        
-        if (convs.length === 0) {
-            conversationList.innerHTML = '<div style="color:#666; font-size:12px; padding:10px;">No history yet</div>';
+        const conversations = await response.json();
+
+        historyList.innerHTML = '';
+
+        if (conversations.length === 0) {
+            historyList.innerHTML = '<div class="history-item">No history</div>';
             return;
         }
 
-        convs.forEach(conv => {
-            const div = document.createElement('div');
-            div.className = 'conv-item';
-            div.textContent = conv.first_message;
-            div.onclick = () => loadSpecificConversation(conv.id);
-            conversationList.appendChild(div);
+        conversations.forEach(conv => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.textContent = conv.first_message;
+            item.onclick = () => loadConversation(conv.id);
+            historyList.appendChild(item);
         });
     }
 
-    async function loadSpecificConversation(id) {
+    async function loadConversation(id) {
         currentConversationId = id;
-        welcomeScreen.style.display = 'none';
-        if(window.innerWidth <= 768) sidebar.classList.remove('active');
-        
+        historySidebar.classList.remove('active');
+
         const response = await fetch(`/api/conversations/${userId}/${id}`);
         const data = await response.json();
-        
+
         messagesArea.innerHTML = '';
         data.messages.forEach(msg => {
             addMessage(msg.role, msg.content);
