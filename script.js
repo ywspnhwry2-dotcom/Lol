@@ -1,218 +1,193 @@
 // static/script.js
 document.addEventListener('DOMContentLoaded', () => {
-    // Theme Toggle
-    const themeToggle = document.getElementById('theme-toggle');
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        themeToggle.innerHTML = newTheme === 'dark' ? '🌙' : '☀️';
-    });
-
-    // Tab Switching
-    const tabs = document.querySelectorAll('.tab');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const targetTab = tab.getAttribute('data-tab');
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === `${targetTab}-tab`) {
-                    content.classList.add('active');
-                }
-            });
-
-            // Initialize terminal if not already done
-            if (targetTab === 'terminal' && !window.terminalInitialized) {
-                initTerminal();
-                window.terminalInitialized = true;
-            }
-        });
-    });
-
-    // Chat Functionality
+    // DOM Elements
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
-    const messagesContainer = document.getElementById('messages');
-    const newChatBtn = document.getElementById('new-chat-btn');
+    const messagesArea = document.getElementById('messages-area');
+    const welcomeScreen = document.getElementById('welcome-screen');
     const conversationList = document.getElementById('conversation-list');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
 
+    // State
     let currentConversationId = null;
-    let userId = localStorage.getItem('user_id') || crypto.randomUUID();
-    localStorage.setItem('user_id', userId);
+    let userId = localStorage.getItem('wormgpt_user_id') || crypto.randomUUID();
+    localStorage.setItem('wormgpt_user_id', userId);
 
-    // Load conversations
+    // Initialize
+    loadConversations();
+
+    // Auto-resize textarea
+    userInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        sendBtn.disabled = this.value.trim() === '';
+    });
+
+    // Handle Enter key
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+
+    sendBtn.addEventListener('click', handleSend);
+    newChatBtn.addEventListener('click', startNewChat);
+    menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+
+    // --- Core Functions ---
+
+    async function handleSend() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // 1. UI Reset
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        sendBtn.disabled = true;
+        welcomeScreen.style.display = 'none';
+
+        // 2. Add User Message
+        addMessage('user', text);
+
+        // 3. Create "Thinking" Placeholder
+        const thinkingId = createThinkingPlaceholder();
+
+        // 4. Fetch AI Response
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: userId,
+                    prompt: text,
+                    conversation_id: currentConversationId
+                })
+            });
+
+            const data = await response.json();
+
+            // 5. Replace Thinking with Content
+            removeMessage(thinkingId);
+            currentConversationId = data.conversation_id;
+            addMessage('ai', data.response);
+
+        } catch (error) {
+            removeMessage(thinkingId);
+            addMessage('ai', "⚠️ Error: Could not connect to WormGPT core. Check connection.");
+            console.error(error);
+        }
+
+        // 6. Refresh Sidebar
+        loadConversations();
+    }
+
+    function addMessage(role, content) {
+        const row = document.createElement('div');
+        row.className = `message-row ${role}`;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = role === 'user' ? 'W' : 'W'; // WormGPT Avatar
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+
+        if (role === 'ai') {
+            // Render Markdown
+            bubble.innerHTML = marked.parse(content);
+            // Highlight Code
+            bubble.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        } else {
+            bubble.textContent = content;
+        }
+
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+        messagesArea.appendChild(row);
+        
+        // Scroll to bottom
+        const chatWrapper = document.querySelector('.chat-wrapper');
+        chatWrapper.scrollTop = chatWrapper.scrollHeight;
+    }
+
+    function createThinkingPlaceholder() {
+        const id = 'thinking-' + Date.now();
+        const row = document.createElement('div');
+        row.className = 'message-row ai';
+        row.id = id;
+
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = 'W';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message-bubble';
+        bubble.innerHTML = `
+            <div class="thinking-indicator">
+                <span class="dots">●●●</span> WormGPT is thinking
+            </div>
+        `;
+
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+        messagesArea.appendChild(row);
+
+        const chatWrapper = document.querySelector('.chat-wrapper');
+        chatWrapper.scrollTop = chatWrapper.scrollHeight;
+
+        return id;
+    }
+
+    function removeMessage(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    }
+
+    async function startNewChat() {
+        currentConversationId = null;
+        messagesArea.innerHTML = '';
+        welcomeScreen.style.display = 'flex';
+        if(window.innerWidth <= 768) sidebar.classList.remove('active');
+    }
+
     async function loadConversations() {
         const response = await fetch(`/api/conversations/${userId}`);
-        const conversations = await response.json();
+        const convs = await response.json();
+        
         conversationList.innerHTML = '';
-        conversations.forEach(conv => {
+        
+        if (convs.length === 0) {
+            conversationList.innerHTML = '<div style="color:#666; font-size:12px; padding:10px;">No history yet</div>';
+            return;
+        }
+
+        convs.forEach(conv => {
             const div = document.createElement('div');
-            div.className = 'conversation-item';
+            div.className = 'conv-item';
             div.textContent = conv.first_message;
-            div.addEventListener('click', () => loadConversation(conv.id));
+            div.onclick = () => loadSpecificConversation(conv.id);
             conversationList.appendChild(div);
         });
     }
 
-    // Load a conversation
-    async function loadConversation(conversationId) {
-        currentConversationId = conversationId;
-        const response = await fetch(`/api/conversations/${userId}/${conversationId}`);
-        const conversation = await response.json();
-        messagesContainer.innerHTML = '';
-        conversation.messages.forEach(msg => {
+    async function loadSpecificConversation(id) {
+        currentConversationId = id;
+        welcomeScreen.style.display = 'none';
+        if(window.innerWidth <= 768) sidebar.classList.remove('active');
+        
+        const response = await fetch(`/api/conversations/${userId}/${id}`);
+        const data = await response.json();
+        
+        messagesArea.innerHTML = '';
+        data.messages.forEach(msg => {
             addMessage(msg.role, msg.content);
         });
     }
-
-    // Add message to chat
-    function addMessage(role, content) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${role}`;
-
-        // Render markdown
-        if (role === 'ai') {
-            messageDiv.innerHTML = marked.parse(content);
-            // Highlight code blocks
-            messageDiv.querySelectorAll('pre code').forEach(block => {
-                hljs.highlightElement(block);
-            });
-        } else {
-            messageDiv.textContent = content;
-        }
-
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    // Send message
-    async function sendMessage() {
-        const prompt = userInput.value.trim();
-        if (!prompt) return;
-
-        userInput.value = '';
-        addMessage('user', prompt);
-
-        // Show typing indicator
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'message ai typing';
-        typingDiv.innerHTML = '<span class="typing-dots">AI is typing...</span>';
-        messagesContainer.appendChild(typingDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                prompt: prompt,
-                conversation_id: currentConversationId
-            })
-        });
-
-        messagesContainer.removeChild(typingDiv);
-        const data = await response.json();
-        currentConversationId = data.conversation_id;
-        addMessage('ai', data.response);
-        await loadConversations();
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    userInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    newChatBtn.addEventListener('click', () => {
-        currentConversationId = null;
-        messagesContainer.innerHTML = '';
-    });
-
-    // File Editor
-    const fileNameInput = document.getElementById('file-name');
-    const saveFileBtn = document.getElementById('save-file-btn');
-    const editor = document.getElementById('editor');
-
-    saveFileBtn.addEventListener('click', async () => {
-        const fileName = fileNameInput.value.trim();
-        const fileContent = editor.textContent;
-
-        if (!fileName) {
-            alert('Please enter a file name');
-            return;
-        }
-
-        const response = await fetch('/api/edit_file', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: userId,
-                file_name: fileName,
-                content: fileContent
-            })
-        });
-
-        const data = await response.json();
-        alert(`File saved to: ${data.file_path}`);
-    });
-
-    // Terminal
-    function initTerminal() {
-        const terminal = new Terminal({
-            fontFamily: '"Courier New", Courier, monospace',
-            theme: {
-                background: '#1e1e1e',
-                foreground: '#e0e0e0'
-            }
-        });
-        const fitAddon = new FitAddon.FitAddon();
-        terminal.loadAddon(fitAddon);
-        terminal.open(document.getElementById('terminal'));
-        fitAddon.fit();
-
-        terminal.write('WormGPT Terminal (Unrestricted)\r\n$ ');
-
-        terminal.onData(async (data) => {
-            if (data === '\r') { // Enter key
-                const command = terminal.currentCommand.trim();
-                if (command) {
-                    terminal.write('\r\n');
-                    const response = await fetch('/api/execute', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: userId,
-                            command: command
-                        })
-                    });
-                    const result = await response.json();
-                    terminal.write(result.output + '\r\n$ ');
-                } else {
-                    terminal.write('\r\n$ ');
-                }
-            } else if (data === '\u007F') { // Backspace
-                if (terminal.currentCommand.length > 0) {
-                    terminal.currentCommand = terminal.currentCommand.slice(0, -1);
-                    terminal.write('\b \b');
-                }
-            } else {
-                terminal.currentCommand += data;
-                terminal.write(data);
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            fitAddon.fit();
-        });
-    }
-
-    // Initialize
-    loadConversations();
 });
