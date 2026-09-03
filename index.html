@@ -1,109 +1,71 @@
 <!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unrestricted AI Chatbot</title>
+    <title>WormGPT Zero-Limit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github-dark.min.css">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm.js@5.1.0/css/xterm.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm.js@5.1.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.7.0/lib/xterm-addon-fit.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="app-container">
+        <!-- Sidebar -->
         <div class="sidebar">
-            <h2>Conversations</h2>
-            <button id="new-conversation">New Chat</button>
-            <div id="conversation-list"></div>
-        </div>
-        <div class="main">
-            <div id="chat-box"></div>
-            <div class="input-area">
-                <textarea id="user-input" placeholder="Ask anything..."></textarea>
-                <button id="send-button">Send</button>
+            <div class="sidebar-header">
+                <button id="new-chat-btn" class="new-chat-btn">
+                    <span class="icon">+</span> New Chat
+                </button>
+                <button id="theme-toggle" class="theme-toggle">
+                    <span class="icon">🌙</span>
+                </button>
             </div>
-            <div class="file-editor">
-                <h3>File Editor</h3>
-                <input type="text" id="file-name" placeholder="filename.py">
-                <textarea id="file-content" placeholder="Edit file content..."></textarea>
-                <button id="save-file">Save File</button>
+            <div class="conversation-list" id="conversation-list"></div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="main-content">
+            <div class="chat-header">
+                <h1>WormGPT Zero-Limit</h1>
+                <div class="tabs">
+                    <button class="tab active" data-tab="chat">Chat</button>
+                    <button class="tab" data-tab="editor">File Editor</button>
+                    <button class="tab" data-tab="terminal">Terminal</button>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div class="chat-container tab-content active" id="chat-tab">
+                <div class="messages" id="messages"></div>
+                <div class="input-area">
+                    <textarea id="user-input" placeholder="Ask anything... (No limits)"></textarea>
+                    <button id="send-btn" class="send-btn">
+                        <span class="icon">→</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Editor Tab -->
+            <div class="editor-container tab-content" id="editor-tab">
+                <div class="editor-header">
+                    <input type="text" id="file-name" placeholder="filename.py" class="file-name-input">
+                    <button id="save-file-btn" class="save-btn">Save File</button>
+                </div>
+                <div class="editor" id="editor"></div>
+            </div>
+
+            <!-- Terminal Tab -->
+            <div class="terminal-container tab-content" id="terminal-tab">
+                <div id="terminal"></div>
             </div>
         </div>
     </div>
-    <script>
-        let currentConversationId = null;
-        let userId = localStorage.getItem("user_id") || crypto.randomUUID();
-        localStorage.setItem("user_id", userId);
 
-        // Load conversations
-        async function loadConversations() {
-            const response = await fetch(`/api/conversations/${userId}`);
-            const conversations = await response.json();
-            const list = document.getElementById("conversation-list");
-            list.innerHTML = "";
-            conversations.forEach(conv => {
-                const div = document.createElement("div");
-                div.textContent = conv.first_message;
-                div.onclick = () => loadConversation(conv.id);
-                list.appendChild(div);
-            });
-        }
-
-        // Load a conversation
-        async function loadConversation(conversationId) {
-            currentConversationId = conversationId;
-            const response = await fetch(`/api/conversations/${userId}/${conversationId}`);
-            const conversation = await response.json();
-            const chatBox = document.getElementById("chat-box");
-            chatBox.innerHTML = "";
-            conversation.messages.forEach(msg => {
-                const div = document.createElement("div");
-                div.className = msg.role;
-                div.textContent = `${msg.role}: ${msg.content}`;
-                chatBox.appendChild(div);
-            });
-        }
-
-        // Send message
-        document.getElementById("send-button").onclick = async () => {
-            const input = document.getElementById("user-input");
-            const prompt = input.value;
-            input.value = "";
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    user_id: userId,
-                    prompt: prompt,
-                    conversation_id: currentConversationId
-                })
-            });
-            const data = await response.json();
-            currentConversationId = data.conversation_id;
-            await loadConversations();
-            await loadConversation(currentConversationId);
-        };
-
-        // Save file
-        document.getElementById("save-file").onclick = async () => {
-            const fileName = document.getElementById("file-name").value;
-            const fileContent = document.getElementById("file-content").value;
-            await fetch("/api/edit_file", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    user_id: userId,
-                    file_name: fileName,
-                    content: fileContent
-                })
-            });
-            alert("File saved!");
-        };
-
-        // Initialize
-        document.getElementById("new-conversation").onclick = () => {
-            currentConversationId = null;
-            document.getElementById("chat-box").innerHTML = "";
-        };
-        loadConversations();
-    </script>
+    <script src="/static/script.js"></script>
 </body>
 </html>
